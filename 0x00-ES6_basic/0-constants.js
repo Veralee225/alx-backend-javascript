@@ -13,4 +13,3 @@ export function getLast() {
   
   return combination;
 }
-  
