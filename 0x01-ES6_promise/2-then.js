@@ -7,5 +7,5 @@ export default function handleResponseFromAPI(promise) {
       .finally(() => {
         console.log('Got a response from the API');
       });
-  }
+}
   
