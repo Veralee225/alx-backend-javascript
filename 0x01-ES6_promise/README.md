@@ -1,5 +1,11 @@
 # 0x01-ES6_promises
 
+## Requirements
+
+- Your code will be tested using *Jest* and the command *npm* *run* *test*
+- Your code will be verified against lint using ESLint
+- All of your functions must be exported
+
 ## Files
 
 *utils.js*
@@ -42,4 +48,3 @@ export function createUser() {
   lastName: 'Salva',
 }
 ```
-
