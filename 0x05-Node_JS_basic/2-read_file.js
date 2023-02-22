@@ -1,26 +1,25 @@
-/* */
-
-const fs = require('fs');
+const fds = require('fs');
 
 function countStudents(path) {
   try {
-    const data = fs.readFileSync(path, 'utf8');
-    const lines = data.split('\n').filter(line => line.trim() !== ''); // remove empty lines
-    const headers = lines[0].split(','); // get headers
-    const students = lines.slice(1).map(line => line.split(',').map(field => field.trim())); // get students
-    const countByField = {};
-    headers.forEach(header => {
-      const index = headers.indexOf(header);
-      const studentsInField = students.filter(student => student[index] !== '');
-      countByField[header] = studentsInField.length;
-      console.log(`Number of students in ${header}: ${countByField[header]}. List: ${studentsInField.map(student => student[0]).join(', ')}`);
-    });
-    console.log(`Number of students: ${students.length}`);
-  } catch (err) {
-    console.error('Cannot load the database');
+    const csvFile = fds.readFileSync(path, { encoding: 'utf8' });
+    const csvData = csvFile.split('\n');
+    const csStudent = [];
+    const sweStudent = [];
+    for (let i = 1; i < csvData.length - 1; i += 1) {
+      const line = csvData[i].split(',');
+      if (line[3] === 'CS') {
+        csStudent.push(line[0].trim());
+      } else if (line[3] === 'SWE') {
+        sweStudent.push(line[0].trim());
+      }
+    }
+    const sum = csStudent.length + sweStudent.length;
+    console.log(`Number of students: ${sum}`);
+    console.log(`Number of students in CS: ${csStudent.length}. List: ${csStudent.toString().split(',').join(', ')}`);
+    console.log(`Number of students in SWE: ${sweStudent.length}. List: ${sweStudent.toString().split(',').join(', ')}`);
+  } catch (ex) {
+    throw new Error('Cannot load the database');
   }
 }
-
-countStudents('database.csv');
-
 module.exports = countStudents;
