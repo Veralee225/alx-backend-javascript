@@ -1,24 +1,43 @@
-const fds = require('fs');
+const fs = require('fs');
 
+export const STUDENT_COUNT = Symbol('Student count');
+
+/**
+ * Count the number of students in a database synchronously.
+ * @param {string} path
+ * @return {Promise<number>}
+ */
 const readDatabase = (path) => new Promise((resolve, reject) => {
-  fds.readFile(path, 'utf8', (err, res) => {
-    if (err) return reject(new Error('Cannot load the database'));
-    const csvData = res.split('\n');
-    const csStudent = [];
-    const sweStudent = [];
-    for (let i = 1; i < csvData.length - 1; i++) {
-      const line = csvData[i].split(',');
-      if (line[3] === 'CS') {
-        csStudent.push(line[0].trim());
-      } else if (line[3] === 'SWE') {
-        sweStudent.push(line[0].trim());
+  if (!fs.existsSync(path)) {
+    reject(new Error('Cannot load the database'));
+  }
+  if (!fs.statSync(path).isFile()) {
+    reject(new Error('Cannot load the database'));
+  }
+  const options = { encoding: 'utf-8' };
+  fs.readFile(path, options, (err, data) => {
+    if (err) {
+      reject(new Error('Cannot load the database'));
+    }
+    const rows = data.trim().split('\n');
+    const fields = rows[0].split(',');
+    const fieldPos = fields.findIndex((value) => value === 'field');
+    const fNamePos = fields.findIndex((value) => value === 'firstname');
+
+    const map = {};
+    for (const row of rows.slice(1)) {
+      const splitRow = row.split(',');
+      if (splitRow.length && (splitRow.length >= fieldPos + 1 && splitRow.length >= fNamePos + 1)) {
+        const field = splitRow[fieldPos];
+        const firstName = splitRow[fNamePos];
+        map[field] = map[field] || [];
+        map[field].push(firstName);
+        map[STUDENT_COUNT] = (map[STUDENT_COUNT] || 0) + 1;
       }
     }
-    return {
-      'CS': csStudent,
-      'SWE': sweStudent,
-    };
+
+    resolve(map);
   });
 });
 
-module.exports = readDatabase;
+export default readDatabase;
