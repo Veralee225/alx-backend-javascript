@@ -1,52 +1,71 @@
 const express = require('express');
+const fs = require('fs');
 
+/**
+ * Create a small HTTP server using Express
+ */
+
+const PORT = 1245;
+const HOST = 'localhost';
+const DATABASE_URI = process.argv.length > 2 ? process.argv[2] : '';
 const app = express();
-const port = 1245;
-const path = process.argv[2];
-const fds = require('fs');
 
-async function countStudents() {
-  try {
-    const csvFile = await fds.promises.readFile(path, { encoding: 'utf8' });
-    const csvData = csvFile.split('\n');
-    const csStudent = [];
-    const sweStudent = [];
-    for (let i = 1; i < csvData.length - 1; i += 1) {
-      const line = csvData[i].split(',');
-      if (line[3] === 'CS') {
-        csStudent.push(line[0].trim());
-      } else if (line[3] === 'SWE') {
-        sweStudent.push(line[0].trim());
+const countStudents = (path) => new Promise((resolve, reject) => {
+  if (!fs.existsSync(path)) {
+    reject(new Error('Cannot load the database'));
+  }
+  if (!fs.statSync(path).isFile()) {
+    reject(new Error('Cannot load the database'));
+  }
+  const options = { encoding: 'utf-8' };
+  fs.readFile(path, options, (err, data) => {
+    if (err) {
+      reject(new Error('Cannot load the database'));
+    }
+    const rows = data.trim().split('\n');
+    const fields = rows[0].split(',');
+    const fieldPos = fields.findIndex((value) => value === 'field');
+    const fNamePos = fields.findIndex((value) => value === 'firstname');
+
+    const STUDENT_COUNT = Symbol('Student count');
+
+    const map = {};
+    for (const row of rows.slice(1)) {
+      const splitRow = row.split(',');
+      if (splitRow.length && (splitRow.length >= fieldPos + 1 && splitRow.length >= fNamePos + 1)) {
+        const field = splitRow[fieldPos];
+        const firstName = splitRow[fNamePos];
+        map[field] = map[field] || [];
+        map[field].push(firstName);
+        map[STUDENT_COUNT] = (map[STUDENT_COUNT] || 0) + 1;
       }
     }
-    return ({
-      csStudent,
-      sweStudent,
-    });
-  } catch {
-    throw new Error('Cannot load the database');
-  }
-}
 
-app.get('/', (req, res) => {
+    let result = `Number of students: ${map[STUDENT_COUNT]}`;
+    Object.entries(map).forEach(([field, names]) => {
+      result += `\nNumber of students in ${field}: ${names.length}. List: ${names.join(', ')}`;
+    });
+    resolve(result);
+  });
+});
+
+app.get('/', (_req, res) => {
   res.send('Hello Holberton School!');
 });
 
-app.get('/students', async (req, res) => {
-  await countStudents(path)
-    .then(({
-      csStudent,
-      sweStudent,
-    }) => {
-      const sum = csStudent.length + sweStudent.length;
-      const hdr = 'This is the list of our students\n';
-      const total = `Number of students: ${sum}\n`;
-      const cs = `Number of students in CS: ${csStudent.length}. List: ${csStudent.toString().split(',').join(', ')}\n`;
-      const swe = `Number of students in SWE: ${sweStudent.length}. List: ${sweStudent.toString().split(',').join(', ')}`;
-      const out = hdr + total + cs + swe;
-      res.status(200).send(out);
+app.get('/students', (_req, res) => {
+  let text = 'This is the list of our students\n';
+  countStudents(DATABASE_URI)
+    .then((result) => res.send(text + result))
+    .catch((err) => {
+      text += err instanceof Error ? err.message : err.toString();
+      return res.send(text);
     });
 });
 
-app.listen(port);
+app.listen(PORT, HOST, () => {
+  console.log(`Server listening on http://${HOST}:${PORT}`);
+  countStudents(DATABASE_URI);
+});
+
 module.exports = app;
